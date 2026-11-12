@@ -16,10 +16,23 @@
 </section>
 <section id="erro" class="erro-geral" hidden></section>
 <section id="revisao" hidden>
-  <p class="nota instrucoes">Confira cada pacote comparando o recorte da guia com o campo ao lado. Use <kbd>Enter</kbd> para ir ao próximo campo. Para corrigir a separação, use “Dividir aqui” entre as páginas ou “Juntar com o anterior”.</p>
+  <p class="nota instrucoes">Confira cada pacote comparando o recorte da guia com o campo ao lado. Clique no recorte para ampliar. Use <kbd>Enter</kbd> para ir ao próximo campo. Para corrigir a separação, use “Dividir aqui” entre as páginas ou “Juntar com o anterior”.</p>
   <ol id="pacotes" class="pacotes"></ol>
 </section>
-<dialog id="visor"><img id="visor-img" alt=""><button class="botao" id="visor-fechar">Fechar</button></dialog>
+<dialog id="visor" aria-labelledby="visor-titulo">
+  <div class="visor-barra">
+    <strong id="visor-titulo"></strong>
+    <div class="visor-controles">
+      <button class="botao discreto" id="visor-menos" aria-label="Diminuir zoom">−</button>
+      <span id="visor-zoom" aria-live="polite">100%</span>
+      <button class="botao discreto" id="visor-mais" aria-label="Aumentar zoom">+</button>
+      <button class="botao discreto" id="visor-ajustar">Ajustar à tela</button>
+      <button class="botao discreto" id="visor-pagina">Ver página inteira</button>
+      <button class="botao" id="visor-fechar">Fechar</button>
+    </div>
+  </div>
+  <div class="visor-area" id="visor-area"><img id="visor-img" alt=""></div>
+</dialog>
 {% endblock %}
 {% block scripts %}
 <script>window.LOTE_ID = "{{ lote.id }}";</script>

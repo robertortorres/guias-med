@@ -72,19 +72,28 @@
   // ------------------------------------------------------------- render
   const img = (nome, alt, cls) => nome ? el('img', { src: `/lotes/${ID}/img/${encodeURIComponent(nome)}`, alt, class: cls, loading: 'lazy' }) : null;
 
-  function campo(p, chave, rotulo, crop) {
+  function campo(p, chave, rotulo, crop, pagina) {
     const input = el('input', {
-      value: p[chave] || '', 'aria-label': rotulo, class: 'campo-input',
+      value: p[chave] || '', 'aria-label': rotulo, class: 'campo-input', 'data-campo': chave,
+      placeholder: chave === 'numero' ? 'Digite o nº da guia' : 'Digite o nome como está no recorte',
       inputmode: chave === 'numero' ? 'numeric' : 'text', autocomplete: 'off', spellcheck: 'false',
-      oninput: (ev) => { p[chave] = ev.target.value; atualizaLinha(p); agendaSalvar(); },
+      oninput: (ev) => { p[chave] = ev.target.value; ev.target.classList.toggle('vazio', !ev.target.value.trim()); atualizaLinha(p); agendaSalvar(); },
       onkeydown: (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); proximoCampo(ev.target); } },
     });
     let fonte = null;
     if (chave === 'numero' && p.numero_fonte === 'barcode') fonte = el('span', { class: 'fonte ok' }, 'código de barras');
     if (chave === 'nome' && p.nome_fonte === 'nome_social') fonte = el('span', { class: 'fonte atencao' }, 'nome social');
+    if (!input.value.trim()) input.classList.add('vazio');
+    const recorte = crop
+      ? el('button', {
+          class: 'recorte', type: 'button', title: 'Clique para ampliar',
+          'aria-label': `Ampliar recorte: ${rotulo}`,
+          onclick: () => abrirImagem(crop, `Recorte: ${rotulo}`, pagina),
+        }, img(crop, `Recorte da guia: ${rotulo}`), el('span', { class: 'lupa' }, 'Ampliar'))
+      : el('span', { class: 'sem-recorte' }, 'sem recorte');
     return el('div', { class: `campo campo-${chave}` },
       el('span', { class: 'campo-rotulo' }, rotulo, fonte),
-      el('div', { class: 'recorte' }, img(crop, `Recorte da guia: ${rotulo}`) || el('span', { class: 'sem-recorte' }, 'sem recorte')),
+      recorte,
       input);
   }
 
@@ -117,8 +126,8 @@
       el('div', { class: 'ordem' }, String(idx + 1)),
       paginas,
       el('div', { class: 'campos' },
-        campo(p, 'numero', 'Nº da guia', p.crop_numero),
-        campo(p, 'nome', 'Nome do beneficiário', p.crop_nome),
+        campo(p, 'numero', 'Nº da guia', p.crop_numero, lote.paginas[p.paginas[0]]),
+        campo(p, 'nome', 'Nome do beneficiário', p.crop_nome, lote.paginas[p.paginas[0]]),
         el('div', { class: 'meta' }, p.convenio ? el('span', { class: 'convenio' }, p.convenio) : null, tipo)),
       el('div', { class: 'saida' },
         el('span', { class: 'saida-rotulo' }, 'Arquivo'),
@@ -136,7 +145,11 @@
     li.querySelector('.arquivo').textContent = nomeArquivo(p);
     const contagem = contar();
     const lista = li.querySelector('.alertas');
-    lista.replaceChildren(...alertasDe(p, contagem).map((a) => el('li', {}, a)));
+    lista.replaceChildren(...alertasDe(p, contagem).map((a) => {
+      const alvo = a.startsWith('Nome') || a.includes('leituras do nome') ? 'nome' : a.startsWith('Número da guia') ? 'numero' : null;
+      if (!alvo) return el('li', {}, a);
+      return el('li', {}, el('button', { class: 'alerta-link', type: 'button', onclick: () => focaCampo(p, alvo) }, a));
+    }));
     li.classList.toggle('com-alerta', lista.children.length > 0);
     resumo();
   }
@@ -188,14 +201,52 @@
     agendaSalvar();
   }
 
-  // ------------------------------------------------------------- visor
-  function abrir(info) {
-    $('#visor-img').src = `/lotes/${ID}/img/${encodeURIComponent(info.view)}`;
-    $('#visor-img').alt = `Página ${info.pagina + 1} de ${info.arquivo}`;
+  // ------------------------------------------------------------- visor com zoom
+  let zoom = 1;
+  let paginaVisor = null;
+  const vimg = $('#visor-img');
+
+  function aplicaZoom() {
+    if (!vimg.naturalWidth) return;
+    vimg.style.width = `${Math.round(vimg.naturalWidth * zoom)}px`;
+    $('#visor-zoom').textContent = `${Math.round(zoom * 100)}%`;
+  }
+  function ajustaTela() {
+    const area = $('#visor-area');
+    zoom = Math.min(3, (area.clientWidth - 16) / vimg.naturalWidth);
+    aplicaZoom();
+  }
+  function abrirImagem(nome, titulo, pagina) {
+    paginaVisor = pagina || null;
+    $('#visor-titulo').textContent = titulo;
+    $('#visor-pagina').hidden = !paginaVisor;
+    vimg.onload = () => { ajustaTela(); };
+    vimg.src = `/lotes/${ID}/img/${encodeURIComponent(nome)}`;
+    vimg.alt = titulo;
     $('#visor').showModal();
   }
+  function abrir(info) {
+    abrirImagem(info.view, `Página ${info.pagina + 1} de ${info.arquivo}`, null);
+  }
+  $('#visor-mais').addEventListener('click', () => { zoom = Math.min(6, zoom * 1.25); aplicaZoom(); });
+  $('#visor-menos').addEventListener('click', () => { zoom = Math.max(0.2, zoom / 1.25); aplicaZoom(); });
+  $('#visor-ajustar').addEventListener('click', ajustaTela);
+  $('#visor-pagina').addEventListener('click', () => { if (paginaVisor) abrir(paginaVisor); });
+  $('#visor-area').addEventListener('wheel', (ev) => {
+    if (!ev.ctrlKey) return;            // Ctrl + rolagem = zoom
+    ev.preventDefault();
+    zoom = ev.deltaY < 0 ? Math.min(6, zoom * 1.1) : Math.max(0.2, zoom / 1.1);
+    aplicaZoom();
+  }, { passive: false });
   $('#visor-fechar').addEventListener('click', () => $('#visor').close());
   $('#visor').addEventListener('click', (ev) => { if (ev.target.id === 'visor') $('#visor').close(); });
+
+  function focaCampo(p, chave) {
+    if (p._li.hidden) { $('#so-alertas').checked = false; filtrar(); }
+    const input = p._li.querySelector(`.campo-input[data-campo="${chave}"]`);
+    p._li.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => { input.focus(); input.select(); }, 250);
+  }
 
   // ------------------------------------------------------------- salvar / exportar
   const limpo = () => pacotes.map(({ _li, ...p }) => p);
@@ -216,9 +267,13 @@
   $('#so-alertas').addEventListener('change', filtrar);
 
   $('#gerar').addEventListener('click', async () => {
-    const vazios = pacotes.map((p, i) => (!p.numero || !p.nome ? i + 1 : null)).filter(Boolean);
-    if (vazios.length) {
-      alert(`Preencha número e nome dos pacotes ${vazios.join(', ')} antes de gerar o ZIP.`);
+    const faltando = pacotes.filter((p) => !p.numero?.trim() || !p.nome?.trim());
+    if (faltando.length) {
+      $('#salvo').textContent = faltando.length === 1
+        ? 'Falta preencher 1 pacote; o campo já está selecionado.'
+        : `Faltam ${faltando.length} pacotes; o primeiro campo vazio já está selecionado. Depois use Enter para seguir.`;
+      const p = faltando[0];
+      focaCampo(p, !p.numero?.trim() ? 'numero' : 'nome');
       return;
     }
     const contagem = contar();
