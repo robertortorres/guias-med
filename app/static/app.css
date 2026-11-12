@@ -1,0 +1,167 @@
+/* Separador de guias — tokens
+   papel: fundo claro levemente esverdeado, como o papel das guias
+   tinta: texto e bordas dos campos (o formulário TISS é desenhado em traço preto)
+   caneta: azul de caneta esferográfica, a cor das assinaturas nas guias; usada para ação e foco */
+:root {
+  --papel: #f4f7f6;
+  --folha: #ffffff;
+  --tinta: #1c2630;
+  --tinta-suave: #55626d;
+  --linha: #c9d2d0;
+  --caneta: #1f4fb0;
+  --caneta-fundo: #e7edf9;
+  --ok: #2e7d4f;
+  --atencao: #7a4f00;
+  --atencao-fundo: #fff2d4;
+  --erro: #a3261e;
+  --erro-fundo: #fce8e6;
+  --fonte: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--papel);
+  color: var(--tinta);
+  font: 400 15px/1.5 var(--fonte);
+  font-variant-numeric: tabular-nums;
+}
+a { color: var(--caneta); }
+:focus-visible { outline: 3px solid var(--caneta); outline-offset: 2px; }
+kbd { font: inherit; font-size: 0.85em; border: 1px solid var(--linha); border-bottom-width: 2px; border-radius: 3px; padding: 0 0.35em; background: var(--folha); }
+
+/* ------------------------------------------------ topo */
+.topo {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  padding: 0.75rem clamp(1rem, 3vw, 2rem);
+  background: var(--folha);
+  border-bottom: 1px solid var(--linha);
+}
+.marca { font-weight: 700; font-size: 1.05rem; color: var(--tinta); text-decoration: none; letter-spacing: -0.01em; }
+.barra { display: flex; align-items: center; gap: 1.25rem; flex: 1; flex-wrap: wrap; }
+#resumo { color: var(--tinta-suave); }
+.filtro { display: inline-flex; gap: 0.4rem; align-items: center; cursor: pointer; }
+.salvo { color: var(--tinta-suave); font-size: 0.875rem; margin-left: auto; }
+
+main { padding: clamp(1rem, 3vw, 2rem); max-width: 1500px; margin: 0 auto; }
+
+/* ------------------------------------------------ botões */
+.botao {
+  font: 600 0.95rem var(--fonte);
+  padding: 0.55rem 1.1rem; border-radius: 6px; cursor: pointer;
+  border: 1.5px solid var(--tinta); background: var(--folha); color: var(--tinta);
+}
+.botao.primario { background: var(--caneta); border-color: var(--caneta); color: #fff; }
+.botao.primario:hover:not(:disabled) { background: #183f8f; }
+.botao:disabled { opacity: 0.5; cursor: not-allowed; }
+.botao.discreto { border-color: var(--linha); font-weight: 500; font-size: 0.875rem; padding: 0.35rem 0.75rem; }
+
+/* ------------------------------------------------ envio */
+.envio { max-width: 880px; margin: 2rem auto 3rem; }
+.soltar {
+  display: grid; gap: 0.5rem; place-items: center; text-align: center;
+  padding: 3.5rem 2rem; cursor: pointer;
+  background: var(--folha);
+  border: 2px dashed var(--tinta-suave); border-radius: 10px;
+}
+.soltar.ativo, .soltar:hover { border-color: var(--caneta); background: var(--caneta-fundo); }
+.soltar:focus-within { outline: 3px solid var(--caneta); outline-offset: 3px; }
+.soltar input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.soltar-titulo { font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 700; letter-spacing: -0.02em; }
+.soltar-texto { color: var(--tinta-suave); max-width: 52ch; }
+.soltar-lista { white-space: pre-line; font-weight: 600; color: var(--caneta); }
+.envio-rodape { display: flex; gap: 1.5rem; align-items: center; justify-content: space-between; margin-top: 1rem; flex-wrap: wrap; }
+.nota { color: var(--tinta-suave); font-size: 0.9rem; max-width: 70ch; margin: 0; }
+
+.historico-lotes { max-width: 1100px; margin: 0 auto; }
+.historico-lotes h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+table { width: 100%; border-collapse: collapse; background: var(--folha); border: 1px solid var(--linha); }
+th, td { text-align: left; padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--linha); vertical-align: top; }
+th { font-size: 0.85rem; color: var(--tinta-suave); font-weight: 600; }
+td.num, th.num { text-align: right; }
+.vazio { color: var(--tinta-suave); }
+
+/* ------------------------------------------------ progresso */
+.progresso { max-width: 560px; margin: 4rem auto; text-align: center; }
+.progresso p:first-child { font-size: 1.25rem; font-weight: 600; }
+.trilho { height: 10px; border-radius: 5px; background: var(--linha); overflow: hidden; margin: 1rem 0; }
+.preenchido { height: 100%; width: 0; background: var(--caneta); transition: width 0.4s ease; }
+.erro-geral { background: var(--erro-fundo); color: var(--erro); padding: 1rem 1.25rem; border-radius: 6px; font-weight: 600; }
+
+/* ------------------------------------------------ revisão */
+.instrucoes { margin-bottom: 1rem; }
+.pacotes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.pacote {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(180px, 260px) minmax(360px, 1fr) minmax(240px, 320px);
+  gap: 1rem; align-items: start;
+  padding: 1rem; background: var(--folha);
+  border: 1px solid var(--linha); border-left: 4px solid var(--linha);
+  border-radius: 6px;
+}
+.pacote.com-alerta { border-left-color: #d9a227; }
+.ordem { font-weight: 700; font-size: 1.1rem; color: var(--tinta-suave); text-align: right; padding-top: 0.15rem; }
+
+.paginas { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.miniatura {
+  display: grid; gap: 2px; padding: 3px; cursor: zoom-in;
+  background: var(--papel); border: 1px solid var(--linha); border-radius: 4px;
+  font: inherit;
+}
+.miniatura img { display: block; width: 76px; height: auto; }
+.mini-legenda { font-size: 0.72rem; color: var(--tinta-suave); }
+.dividir {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font: 500 0.7rem var(--fonte); color: var(--tinta-suave);
+  background: none; border: 1px dashed var(--linha); border-radius: 4px;
+  padding: 0.4rem 0.1rem; cursor: pointer;
+}
+.dividir:hover { color: var(--caneta); border-color: var(--caneta); }
+
+/* Os campos imitam as caixas do formulário TISS: borda fina preta, rótulo pequeno no canto.
+   O recorte real da guia fica dentro da caixa, logo acima do valor editável. */
+.campos { display: grid; gap: 0.6rem; }
+.campo {
+  display: grid; gap: 0.25rem;
+  border: 1.5px solid var(--tinta); border-radius: 2px;
+  padding: 0.3rem 0.5rem 0.45rem;
+  background: var(--folha);
+}
+.campo:focus-within { border-color: var(--caneta); box-shadow: 0 0 0 3px var(--caneta-fundo); }
+.campo-rotulo { font-size: 0.75rem; font-weight: 600; display: flex; gap: 0.5rem; align-items: center; }
+.fonte { font-weight: 500; font-size: 0.72rem; padding: 0 0.4rem; border-radius: 3px; }
+.fonte.ok { color: var(--ok); background: #e3f2e9; }
+.fonte.atencao { color: var(--atencao); background: var(--atencao-fundo); }
+.recorte { width: fit-content; max-width: 100%; border-radius: 2px; overflow: hidden; }
+.recorte img { display: block; max-width: 100%; height: auto; max-height: 84px; object-fit: contain; object-position: left center; }
+.sem-recorte { display: block; padding: 0.5rem; font-size: 0.8rem; color: var(--tinta-suave); }
+.campo-input {
+  font: 600 1.05rem var(--fonte); color: var(--tinta);
+  border: none; border-bottom: 1px solid var(--linha); padding: 0.2rem 0; background: transparent;
+  text-transform: uppercase; width: 100%;
+}
+.campo-numero .campo-input { letter-spacing: 0.03em; }
+.campo-input:focus { outline: none; border-bottom-color: var(--caneta); }
+.meta { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.convenio { font-weight: 600; }
+.tipo { font: inherit; padding: 0.3rem 0.4rem; border: 1px solid var(--linha); border-radius: 4px; background: var(--folha); }
+
+.saida { display: grid; gap: 0.4rem; }
+.saida-rotulo { font-size: 0.75rem; font-weight: 600; color: var(--tinta-suave); }
+.arquivo { margin: 0; font-weight: 600; word-break: break-word; }
+.alertas { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.alertas li { font-size: 0.85rem; color: var(--atencao); background: var(--atencao-fundo); padding: 0.3rem 0.55rem; border-radius: 4px; }
+.acoes { margin-top: 0.25rem; }
+
+dialog#visor { border: none; padding: 0.75rem; border-radius: 8px; max-width: 96vw; max-height: 96vh; }
+dialog#visor::backdrop { background: rgb(28 38 48 / 0.7); }
+#visor-img { display: block; max-width: 92vw; max-height: 84vh; margin-bottom: 0.5rem; }
+
+@media (max-width: 1100px) {
+  .pacote { grid-template-columns: 2rem 1fr; }
+  .paginas, .campos, .saida { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 700px) { .topo { position: static; } }

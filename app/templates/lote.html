@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Lote {{ lote.id }} | Separador de guias{% endblock %}
+{% block topo %}
+<div class="barra" id="barra" hidden>
+  <span id="resumo"></span>
+  <label class="filtro"><input type="checkbox" id="so-alertas"> Só pacotes com alerta</label>
+  <span class="salvo" id="salvo" aria-live="polite"></span>
+  <button class="botao primario" id="gerar">Gerar ZIP</button>
+</div>
+{% endblock %}
+{% block main %}
+<section id="progresso" class="progresso" hidden>
+  <p id="progresso-texto">Lendo páginas…</p>
+  <div class="trilho"><div class="preenchido" id="progresso-barra"></div></div>
+  <p class="nota">Pode deixar esta aba aberta; a revisão aparece sozinha quando terminar.</p>
+</section>
+<section id="erro" class="erro-geral" hidden></section>
+<section id="revisao" hidden>
+  <p class="nota instrucoes">Confira cada pacote comparando o recorte da guia com o campo ao lado. Use <kbd>Enter</kbd> para ir ao próximo campo. Para corrigir a separação, use “Dividir aqui” entre as páginas ou “Juntar com o anterior”.</p>
+  <ol id="pacotes" class="pacotes"></ol>
+</section>
+<dialog id="visor"><img id="visor-img" alt=""><button class="botao" id="visor-fechar">Fechar</button></dialog>
+{% endblock %}
+{% block scripts %}
+<script>window.LOTE_ID = "{{ lote.id }}";</script>
+<script src="/static/review.js"></script>
+{% endblock %}

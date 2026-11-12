@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="envio">
+  <form id="form-envio" action="/lotes" method="post" enctype="multipart/form-data">
+    <label class="soltar" id="soltar">
+      <input type="file" name="arquivos" id="arquivos" accept="application/pdf" multiple required>
+      <span class="soltar-titulo">Solte aqui os PDFs escaneados</span>
+      <span class="soltar-texto">ou clique para escolher. Pode mandar vários de uma vez; cada PDF é separado em pacotes de guia + anexos.</span>
+      <span class="soltar-lista" id="lista-arquivos"></span>
+    </label>
+    <div class="envio-rodape">
+      <p class="nota">Reconhece guias de consulta e SP/SADT de {{ convenios | join(", ") }}. Até {{ max_mb }} MB por envio. Os lotes são apagados automaticamente depois de {{ retencao }} dias.</p>
+      <button class="botao primario" type="submit" id="enviar" disabled>Separar guias</button>
+    </div>
+  </form>
+</section>
+
+<section class="historico-lotes">
+  <h2>Lotes recentes</h2>
+  {% if lotes %}
+  <table>
+    <thead><tr><th>Enviado em</th><th>Arquivos</th><th class="num">Páginas</th><th class="num">Pacotes</th><th>Situação</th></tr></thead>
+    <tbody>
+    {% for l in lotes %}
+      <tr>
+        <td><a href="/lotes/{{ l.id }}">{{ l.criado[8:10] }}/{{ l.criado[5:7] }} às {{ l.criado[11:16] }}</a></td>
+        <td>{% for a in l.arquivos %}{{ a.original }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td class="num">{{ l.total }}</td>
+        <td class="num">{{ l.pacotes or "" }}</td>
+        <td>
+          {% if l.status == "processando" %}Lendo páginas ({{ l.feitos }} de {{ l.total }})
+          {% elif l.status == "revisao" %}Aguardando revisão
+          {% elif l.status == "exportado" %}ZIP gerado
+          {% else %}Erro no processamento{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="vazio">Nenhum lote ainda. Envie o primeiro PDF acima.</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const input = document.getElementById('arquivos');
+const lista = document.getElementById('lista-arquivos');
+const enviar = document.getElementById('enviar');
+const soltar = document.getElementById('soltar');
+function atualiza() {
+  const nomes = [...input.files].map(f => f.name);
+  lista.textContent = nomes.length ? nomes.join('\n') : '';
+  enviar.disabled = !nomes.length;
+}
+input.addEventListener('change', atualiza);
+['dragenter','dragover'].forEach(e => soltar.addEventListener(e, ev => { ev.preventDefault(); soltar.classList.add('ativo'); }));
+['dragleave','drop'].forEach(e => soltar.addEventListener(e, ev => { ev.preventDefault(); soltar.classList.remove('ativo'); }));
+soltar.addEventListener('drop', ev => { input.files = ev.dataTransfer.files; atualiza(); });
+document.getElementById('form-envio').addEventListener('submit', () => {
+  enviar.disabled = true; enviar.textContent = 'Enviando…';
+});
+</script>
+{% endblock %}

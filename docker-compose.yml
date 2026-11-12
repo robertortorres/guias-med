@@ -1,0 +1,21 @@
+services:
+  guias:
+    build: .
+    container_name: separador-guias
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Processos de OCR em paralelo (padrão: nº de CPUs)
+      WORKERS: "4"
+      # Lotes (PDFs, imagens) são apagados depois de N dias
+      RETENTION_DAYS: "7"
+      MAX_UPLOAD_MB: "200"
+      # Login básico: deixe vazio para desativar (só faça isso em rede interna)
+      APP_USER: "${APP_USER:-}"
+      APP_PASSWORD: "${APP_PASSWORD:-}"
+      # Para editar os templates sem rebuild, monte o YAML (veja o volume abaixo)
+      CONVENIOS_YAML: /srv/config/convenios.yaml
+    volumes:
+      - ./data:/data
+      - ./config/convenios.yaml:/srv/config/convenios.yaml:ro

@@ -1,0 +1,57 @@
+# Templates por convênio + tipo de guia.
+# Coordenadas relativas (0..1) à página JÁ ROTACIONADA na posição de leitura.
+# box: [x0, y0, x1, y1]
+#
+# detect.all -> todas as palavras precisam aparecer no cabeçalho (OCR, maiúsculas)
+# detect.any -> basta uma delas
+# numero.regex vale para o código de barras e para o OCR; o 1º match vira o nº da guia.
+# A ordem importa: o primeiro template que casar é usado.
+# nome.scale: quanto ampliar o recorte antes do OCR (fonte pequena = valor maior).
+# strict_regex: o formato do número é exclusivo do template e serve para identificar o
+#   convênio quando o OCR não lê o logo/nome.
+
+templates:
+  - id: bradesco_consulta
+    convenio: Bradesco
+    tipo: consulta
+    ans: ["005711", "421715"]  # as guias Bradesco Saúde vêm com um ou outro
+    detect: {all: [CONSULTA], any: [BRADES, "005711"]}
+    numero: {regex: '19\d{8}', box: [0.60, 0.03, 1.00, 0.20], barcode: true}
+    nome:   {label: '7\s*-?\s*Nome', box: [0.00, 0.27, 0.78, 0.46]}
+
+  - id: geap_consulta
+    convenio: GEAP
+    tipo: consulta
+    ans: "323080"
+    detect: {all: [CONSULTA], any: [GEAP, "323080"]}
+    numero: {regex: '1\d{7}', box: [0.00, 0.12, 0.62, 0.33], barcode: true}
+    nome:   {label: '7\s*-?\s*Nome', box: [0.00, 0.30, 0.62, 0.52]}
+
+  - id: geap_sadt
+    convenio: GEAP
+    tipo: sadt
+    ans: "323080"
+    detect: {all: [SADT], any: [GEAP, "323080"]}
+    numero: {regex: '1\d{7}', box: [0.50, 0.00, 1.00, 0.20], barcode: true, scale: 3}
+    nome:   {label: '10\s*-?\s*Nome', box: [0.00, 0.08, 0.60, 0.33], scale: 3}
+
+  - id: porto_sadt
+    convenio: Porto
+    tipo: sadt
+    ans: "000582"
+    detect: {all: [SADT], any: [PORTO, SEGURO, "000582"]}
+    numero: {regex: '\d{8}', box: [0.64, 0.00, 1.00, 0.12], barcode: false}
+    nome:   {label: '10\s*-?\s*Nome', social_label: '89\s*-?\s*Nome Social', box: [0.00, 0.12, 0.78, 0.33]}
+
+  - id: porto_consulta
+    convenio: Porto
+    tipo: consulta
+    ans: "000582"
+    detect: {all: [CONSULTA], any: [PORTO, SEGURO, ATENDER, "000582"]}
+    numero: {regex: '\d{8}20[2-3]\d', box: [0.66, 0.00, 1.00, 0.11], barcode: false, strict_regex: true}
+    nome:   {label: '7\s*-?\s*Nome', box: [0.00, 0.16, 0.78, 0.40]}
+
+# Nome do arquivo por tipo de guia. Campos: {numero}, {nome} (primeiro + último)
+nomes_arquivo:
+  consulta: "{numero} - {nome}"
+  sadt: "{numero} - Pedido Medico - {nome}"
