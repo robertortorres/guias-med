@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 # OCR em português + leitura de código de barras
 RUN apt-get update \
- && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-por libzbar0 \
+ && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-por libzbar0 tzdata \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /srv
@@ -16,6 +16,7 @@ COPY config ./config
 ENV DATA_DIR=/data \
     OMP_THREAD_LIMIT=1 \
     PYTHONUNBUFFERED=1
+    TZ=America/Sao_Paulo
 
 RUN useradd -r -u 1000 guias && mkdir -p /data && chown guias /data
 COPY docker-entrypoint.sh /usr/local/bin/
