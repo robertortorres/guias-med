@@ -18,7 +18,8 @@ ENV DATA_DIR=/data \
     PYTHONUNBUFFERED=1
 
 RUN useradd -r -u 1000 guias && mkdir -p /data && chown guias /data
-USER guias
+COPY docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/saude')"

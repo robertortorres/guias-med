@@ -44,6 +44,7 @@ class PageResult:
     numero_fonte: str = ""  # barcode | ocr | ""
     nome: str = ""
     nome_fonte: str = ""    # nome | nome_social | ""
+    nome_conf: float | None = None
     ans_confere: bool | None = None
     alertas: list[str] = field(default_factory=list)
     thumb: str = ""
@@ -159,6 +160,12 @@ def classify(header_text: str, templates: list[dict]) -> dict | None:
     return None
 
 
+def looks_like_guide(header_text: str) -> bool:
+    up = strip_accents(header_text).upper()
+    tipo = "CONSULTA" in up or "SADT" in up or "SERVICO PROFISSIONAL" in up
+    return "GUIA" in up and tipo and re.search(r"\d{8,}", re.sub(r"(?<=\d) (?=\d)", "", up)) is not None
+
+
 def classify_by_number(header_text: str, templates: list[dict]) -> dict | None:
     """Plano C: o tipo de guia foi lido, o convênio não. Usa o formato do número
     (ex.: Porto consulta = 8 dígitos + 2026) para decidir."""
@@ -172,19 +179,24 @@ def classify_by_number(header_text: str, templates: list[dict]) -> dict | None:
     return None
 
 
-def classify_by_barcode(img: Image.Image, header_text: str, templates: list[dict]) -> dict | None:
+def _decode(img: Image.Image) -> list[str]:
+    try:
+        return [c.data.decode(errors="ignore") for c in decode_barcodes(img)]
+    except Exception:
+        return []
+
+
+def classify_by_barcode(img: Image.Image, upright: Image.Image, header_text: str, templates: list[dict]) -> dict | None:
     """Plano B quando o OCR do cabeçalho erra o nome do convênio: o código de barras
     casa com o padrão de número de um template do mesmo tipo de guia."""
     up = strip_accents(header_text).upper()
-    try:
-        codes = [c.data.decode(errors="ignore") for c in decode_barcodes(img)]
-    except Exception:
-        return None
+    full = _decode(img)
     for t in templates:
         if not t["numero"].get("barcode"):
             continue
         if not all(k.upper() in up for k in t.get("detect", {}).get("all", [])):
             continue
+        codes = full or _decode(upscale(crop_rel(upright, t["numero"]["box"]), 2))
         if any(re.fullmatch(t["numero"]["regex"], c) for c in codes):
             return t
     return None
@@ -295,6 +307,10 @@ def read_name_anchored(region: Image.Image, label: str, lang: str, scale: float 
         for psm in ("6", "7"):
             name = _name_from_line(pytesseract.image_to_string(line_img, lang=lang, config=f"--psm {psm}"))
             if name:
+                # confiança média do OCR nas palavras do nome (0-100)
+                dd = pytesseract.image_to_data(line_img, lang=lang, config=f"--psm {psm}", output_type=pytesseract.Output.DICT)
+                confs = [float(c) for w, c in zip(dd["text"], dd["conf"]) if clean_name(w) and clean_name(w) in name and float(c) >= 0]
+                read_name_anchored.last_conf = min(confs) if confs else 0.0
                 # recorte para a tela: rótulo + linha do nome
                 top = max(0, d["top"][ref] - int(h * 0.6))
                 return name, big.crop((box[0], top, box[2], box[3]))
@@ -318,14 +334,18 @@ def read_name(region: Image.Image, label: str, lang: str, social_label: str | No
         return ""
 
     name, crop = read_name_anchored(region, label, lang, scale)
+    second = after(label)
+    read_name.agree = bool(name) and short_name(name) == short_name(second)
     if not name:
-        name = after(label)
+        name = second
     if name:
         return name, "nome", crop
     if social_label:
         name, crop = read_name_anchored(region, social_label, lang, scale)
+        second = after(social_label)
+        read_name.agree = bool(name) and short_name(name) == short_name(second)
         if not name:
-            name = after(social_label)
+            name = second
         if name:
             return name, "nome_social", crop
     return "", "", None
@@ -372,7 +392,7 @@ def process_page(pdf_path: str, index: int, out_dir: str, hint: int | None = Non
 
     tpl = classify(header, cfg["templates"]) if angle is not None else None
     if angle is not None and tpl is None:
-        tpl = classify_by_barcode(img, header, cfg["templates"]) or classify_by_number(header, cfg["templates"])
+        tpl = classify_by_number(header, cfg["templates"]) or classify_by_barcode(img, upright, header, cfg["templates"])
     res = PageResult(
         arquivo=pdf.name, pagina=index, rotacao=angle,
         tipo=tpl["tipo"] if tpl else "anexo",
@@ -382,6 +402,12 @@ def process_page(pdf_path: str, index: int, out_dir: str, hint: int | None = Non
         view=f"{stem}_view.jpg",
     )
     if not tpl:
+        if angle is not None and looks_like_guide(header):
+            # cabeçalho de guia com número impresso, mas convênio não reconhecido:
+            # vira pacote próprio (nunca é grudado no pacote anterior sem aviso)
+            up = strip_accents(header).upper()
+            res.tipo = "sadt" if "SADT" in up or "SERVICO PROFISSIONAL" in up else "consulta"
+            res.alertas.append("Guia não reconhecida pelos templates: confira convênio, número e nome.")
         return res.to_dict()
 
     ncfg, mcfg = tpl["numero"], tpl["nome"]
@@ -401,7 +427,12 @@ def process_page(pdf_path: str, index: int, out_dir: str, hint: int | None = Non
         res.numero_fonte = "ocr" if res.numero else ""
 
     name_region = crop_rel(upright, mcfg["box"])
+    read_name_anchored.last_conf = None
+    read_name.agree = False
     res.nome, res.nome_fonte, name_tight = read_name(name_region, mcfg["label"], lang, mcfg.get("social_label"), mcfg.get("scale", 1.5))
+    res.nome_conf = read_name_anchored.last_conf
+    if res.nome and not getattr(read_name, "agree", False):
+        res.alertas.append("Duas leituras do nome não bateram; compare com o recorte.")
     if res.nome_fonte == "nome_social":
         res.alertas.append("Campo Nome vazio na guia; foi usado o Nome Social.")
 

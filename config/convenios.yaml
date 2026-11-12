@@ -16,7 +16,7 @@ templates:
     tipo: consulta
     ans: ["005711", "421715"]  # as guias Bradesco Saúde vêm com um ou outro
     detect: {all: [CONSULTA], any: [BRADES, "005711"]}
-    numero: {regex: '19\d{8}', box: [0.60, 0.03, 1.00, 0.20], barcode: true}
+    numero: {regex: '19\d{8}', box: [0.60, 0.03, 1.00, 0.20], barcode: true, strict_regex: true}
     nome:   {label: '7\s*-?\s*Nome', box: [0.00, 0.27, 0.78, 0.46]}
 
   - id: geap_consulta

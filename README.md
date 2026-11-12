@@ -40,7 +40,6 @@ Tudo roda localmente, em CPU. Nenhum dado de paciente sai do servidor.
 ```bash
 git clone … separador-guias && cd separador-guias
 cp .env.example .env            # defina usuário e senha
-mkdir -p data && sudo chown 1000:1000 data
 docker compose up -d --build
 ```
 
