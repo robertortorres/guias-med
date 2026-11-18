@@ -83,6 +83,7 @@ Mostra o que foi lido em cada página e os pacotes que seriam gerados.
 | Template | Número | Origem do número |
 |---|---|---|
 | Bradesco consulta | 10 dígitos (`19…`) | código de barras |
+| SulAmérica consulta | 10 dígitos (hoje `77…`) | OCR |
 | GEAP consulta | 8 dígitos (`1…`) | código de barras |
 | GEAP SP/SADT | 8 dígitos (`1…`) | código de barras |
 | Porto SP/SADT | 8 dígitos | OCR |
@@ -90,6 +91,8 @@ Mostra o que foi lido em cada página e os pacotes que seriam gerados.
 
 Observação: as guias Bradesco vêm com Registro ANS 005711 ou 421715; os dois estão cadastrados.
 O número da Porto consulta termina no ano; o padrão aceita de 2020 a 2039.
+As guias SulAmérica cortam o nome do beneficiário em 32 caracteres (ex.: "...MOURA CARVAL");
+o arquivo sai com o sobrenome como está impresso.
 
 ## Estrutura
 

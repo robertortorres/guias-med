@@ -19,6 +19,17 @@ templates:
     numero: {regex: '19\d{8}', box: [0.60, 0.03, 1.00, 0.20], barcode: true, strict_regex: true}
     nome:   {label: '7\s*-?\s*Nome', box: [0.00, 0.27, 0.78, 0.46]}
 
+  - id: sulamerica_consulta
+    convenio: SulAmérica
+    tipo: consulta
+    ans: "006246"
+    # "ONSULT": o título às vezes sai como "UIA DE ONSU LTA" no OCR
+    detect: {all: [ONSULT], any: [SULAMERICA, SULAM, "006246"]}
+    # campo 2 (Nº Guia no Prestador) = campo 3; 10 dígitos, hoje começando em 77. Sem código de barras.
+    numero: {regex: '\d{10}', box: [0.60, 0.00, 1.00, 0.10], barcode: false}
+    # o sistema emissor corta o nome em 32 caracteres (ex.: "...MOURA CARVAL")
+    nome:   {label: '(?<!\d)7\s*-?\s*Nome', social_label: '26\s*-?\s*Nome Social', box: [0.00, 0.24, 0.60, 0.42]}
+
   - id: geap_consulta
     convenio: GEAP
     tipo: consulta

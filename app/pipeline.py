@@ -147,23 +147,38 @@ def detect_orientation(img: Image.Image, lang: str, hint: int | None = None) -> 
 
 # --------------------------------------------------------------------------- classificação
 
+def _has(keyword: str, up: str, up_compact: str) -> bool:
+    """Palavra no cabeçalho, tolerando espaço que o OCR enfia no meio ("ONSU LTA")."""
+    k = keyword.upper()
+    return k in up or k.replace(" ", "") in up_compact
+
+
 def classify(header_text: str, templates: list[dict]) -> dict | None:
     up = strip_accents(header_text).upper()
+    compact = re.sub(r"\s+", "", up)
     for t in templates:
         det = t.get("detect", {})
-        if not all(k.upper() in up for k in det.get("all", [])):
+        if not all(_has(k, up, compact) for k in det.get("all", [])):
             continue
         anys = det.get("any", [])
-        if anys and not any(k.upper() in up for k in anys):
+        if anys and not any(_has(k, up, compact) for k in anys):
             continue
         return t
     return None
 
 
-def looks_like_guide(header_text: str) -> bool:
+def looks_like_guide(header_text: str, templates: list[dict] | None = None) -> bool:
+    """Rede de segurança: parece guia mesmo sem casar com um template."""
     up = strip_accents(header_text).upper()
+    compact = re.sub(r"\s+", "", up)
+    has_number = re.search(r"\d{8,}", re.sub(r"(?<=\d) (?=\d)", "", up)) is not None
     tipo = "CONSULTA" in up or "SADT" in up or "SERVICO PROFISSIONAL" in up
-    return "GUIA" in up and tipo and re.search(r"\d{8,}", re.sub(r"(?<=\d) (?=\d)", "", up)) is not None
+    if "GUIA" in up and tipo and has_number:
+        return True
+    # nome do convênio reconhecido + campo típico de guia (título pode ter saído ilegível)
+    campos = "PRESTADOR" in compact or "REGISTROANS" in compact or "BENEFICIARIO" in compact
+    convenio = any(_has(k, up, compact) for t in (templates or []) for k in t.get("detect", {}).get("any", []))
+    return convenio and campos and has_number
 
 
 def classify_by_number(header_text: str, templates: list[dict]) -> dict | None:
@@ -217,18 +232,28 @@ def read_barcode(img: Image.Image, regex: str) -> str:
     return ""
 
 
+def _match_number(text: str, core: str, bounded: str) -> str:
+    """1º: cada número separado (evita grudar o "2" do rótulo "2 - Nº Guia" no número);
+    2º: dígitos da linha juntos (quando o OCR parte o número em dois pedaços)."""
+    for line in text.splitlines():
+        for tok in re.findall(r"\d+", line):
+            if re.fullmatch(core, tok):
+                return tok
+    for line in text.splitlines():
+        m = re.search(bounded, re.sub(r"[^\d]", "", line))
+        if m:
+            return m.group(0)
+    return ""
+
+
 def read_number_ocr(region: Image.Image, regex: str, header_text: str, scale: float = 2.0) -> str:
-    regex = rf"(?<!\d)(?:{regex})(?!\d)"
+    bounded = rf"(?<!\d)(?:{regex})(?!\d)"
     big = upscale(ImageOps.autocontrast(region), scale)
     for cfg in ("--psm 6 -c tessedit_char_whitelist=0123456789", "--psm 6"):
-        text = pytesseract.image_to_string(big, config=cfg)
-        digits = re.sub(r"[^\d\n]", "", text)
-        for line in digits.splitlines():
-            m = re.search(regex, line)
-            if m:
-                return m.group(0)
-    m = re.search(regex, re.sub(r"(?<=\d) (?=\d)", "", header_text))
-    return m.group(0) if m else ""
+        found = _match_number(pytesseract.image_to_string(big, config=cfg), regex, bounded)
+        if found:
+            return found
+    return _match_number(header_text, regex, bounded)
 
 
 def remove_vertical_lines(img: Image.Image, frac: float = 0.7) -> Image.Image:
@@ -365,6 +390,9 @@ def check_ans(header: str, ans) -> tuple[bool | None, str]:
             for nxt in lines[i:i + 3]:
                 found = re.findall(r"\b\d{6}\b", nxt)
                 if found:
+                    # 1 dígito diferente = erro de leitura do OCR, não outro convênio
+                    if any(sum(x != y for x, y in zip(found[0], a)) <= 1 for a in expected):
+                        return True, found[0]
                     return False, found[0]
     return None, ""
 
@@ -402,7 +430,7 @@ def process_page(pdf_path: str, index: int, out_dir: str, hint: int | None = Non
         view=f"{stem}_view.jpg",
     )
     if not tpl:
-        if angle is not None and looks_like_guide(header):
+        if angle is not None and looks_like_guide(header, cfg["templates"]):
             # cabeçalho de guia com número impresso, mas convênio não reconhecido:
             # vira pacote próprio (nunca é grudado no pacote anterior sem aviso)
             up = strip_accents(header).upper()
