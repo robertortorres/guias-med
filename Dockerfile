@@ -15,7 +15,7 @@ COPY config ./config
 # OMP_THREAD_LIMIT=1: cada processo do pool usa 1 thread do Tesseract (paralelismo vem do pool)
 ENV DATA_DIR=/data \
     OMP_THREAD_LIMIT=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
     TZ=America/Sao_Paulo
 
 RUN useradd -r -u 1000 guias && mkdir -p /data && chown guias /data
